@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="turtleManager.Dao.TieziDao">
+<resultMap id="tieziMap" type="map">
+    <id property="tiezi_contextId" column="tiezi_contextId"></id>
+    <result property="title" column="title"></result>
+    <result property="context" column="context"></result>
+    <result property="time" column="time"></result>
+    <result property="location" column="location"></result>
+    <collection property="picList" ofType="turtleManager.Domain.Pic" javaType="ArrayList">
+        <id property="picId" column="picId"></id>
+        <result property="picUrl" column="picUrl"></result>
+    </collection>
+    <collection property="video" javaType="turtleManager.Domain.Video" >
+        <id property="videoId" column="videoId"></id>
+        <result property="videoUrl" column="videoUrl"></result>
+    </collection>
+    <collection property="turtle" javaType="turtleManager.Domain.Turtle" >
+        <id property="turtleId" column="turtleId"></id>
+        <result property="turtleName" column="turtleName"></result>
+    </collection>
+    <collection property="tieziType" javaType="turtleManager.Domain.TieziType">
+        <id property="tiezi_typeId" column="tiezi_typeId"></id>
+        <result property="tiezi_typeName" column="tiezi_typeName"></result>
+    </collection>
+    <collection property="tieziDeal" javaType="turtleManager.Domain.TieziDeal">
+        <id column="tiezi_dealId" property="tiezi_dealId"></id>
+        <result column="price" property="price"></result>
+        <result column="warrantyPeriod" property="warrantyPeriod"></result>
+        <result column="flawDescription" property="flawDescription"></result>
+    </collection>
+    <collection property="user" javaType="turtleManager.Domain.User">
+        <id column="userId" property="userId"></id>
+        <result column="userName" property="userName"></result>
+    </collection>
+    <collection property="userInfo" javaType="turtleManager.Domain.UserInfo">
+        <id column="userInfoId" property="userInfoId"></id>
+        <result column="userPicture" property="userPicture"></result>
+    </collection>
+
+</resultMap>
+<select id="getTiezi" parameterType="map" resultMap="tieziMap">
+    SELECT  tiezi_context.*,tiezi_deal.*,tiezi_type.*,turtle.turtleName,user.userId,user.userName,userinfo.* ,video.*,pic.picUrl
+    FROM tiezi
+    LEFT JOIN tiezi_context ON tiezi.tieziId=tiezi_context.tiezi_contextId
+    LEFT JOIN tiezi_deal ON tiezi_deal.tiezi_dealId=tiezi_context.tiezi_dealId
+    LEFT JOIN tiezi_type ON tiezi_type.tiezi_typeId=tiezi.tiezi_typeId
+    LEFT JOIN turtle ON turtle.turtleId=tiezi.turtleId
+    LEFT JOIN user ON user.userId=tiezi.userId
+    LEFT JOIN userinfo ON user.userInfoId=userinfo.userInfoId
+    LEFT JOIN video ON video.tieziId=tiezi.tieziId
+    LEFT JOIN pic ON pic.tieziId=tiezi.tieziId AND pic.replyId IS NULL
+    <where>
+        <choose>
+            <when test="_parameter.isEmpty()"></when>
+            <when test="id!=null">tiezi_contextId=${id}</when>
+            <otherwise>
+                id IN (SELECT tiezi_contextId FROM tiezi WHERE 1=1
+                <if test="tieziTypeId!=null">AND tiezi_typeId=${tieziTypeId}</if>
+                <if test="turtleTypeId!=null">
+                    <if test="turtleId==null">AND turtleId IN (SELECT id FROM turtle WHERE typeId=${turtleTypeId})</if>
+                    <if test="turtleId!=null">AND turtleId=${turtleId}</if>
+                </if>
+                )
+            </otherwise>
+        </choose>
+    </where>
+</select>
+
+
+<resultMap id="replyMap" type="turtleManager.Domain.Reply">
+    <id column="replyId" property="replyId"/>
+    <result column="tieziId" property="tieziId"/>
+    <result column="reply_id" property="reply_id"/>
+    <result column="context" property="context"/>
+    <result column="time" property="time"/>
+    <result column="floor" property="floor"/>
+    <collection property="user" javaType="turtleManager.Domain.User">
+        <id column="userId" property="userId"></id>
+        <result column="userName" property="userName"></result>
+        <collection property="userInfo" javaType="turtleManager.Domain.UserInfo">
+            <id column="userInfoId" property="userInfoId"></id>
+            <result column="userPicture" property="userPicture"></result>
+        </collection>
+    </collection>
+
+
+</resultMap>
+
+<select id="getReply" parameterType="map" resultMap="replyMap">
+    SELECT * FROM reply
+    LEFT JOIN user ON user.userId=reply.userId
+    LEFT JOIN userinfo ON user.userInfoId=userinfo.userInfoId
+    <where>
+        <choose>
+            <when test="replyId!=null"> reply_id=${replyId}</when>
+            <otherwise>
+                reply.tieziId=${tieziId} AND reply.reply_id IS NULL
+            </otherwise>
+        </choose>
+    </where>
+    ORDER BY 'time' ASC
+    <if test="page!=null">
+        limit ${(page.currentPage-1)*page.pageSize} ,${page.currentPage*page.pageSize-1}
+    </if>
+
+</select>
+    <select id="getPic" parameterType="map" resultType="turtleManager.Domain.Pic">
+        SELECT picId,picUrl FROM pic WHERE tieziId=${tieziId}<if test="replyId!=0 and replyId!=null">AND replyId=${replyId}</if><if test="replyId==0 or replyId==null">AND replyId IS NULL </if>
+    </select>
+
+<insert id="addPublicTiezi" parameterType="map">
+    INSERT IGNORE INTO tiezi_context (title,context,picList,video,location,`time`,tieziId) VALUES
+    (#{tiezi.title},#{tiezi.context},#{tiezi.picList},#{tiezi.video},#{tiezi.location},#{tiezi.time},(SELECT id FROM tiezi WHERE turtleId=${turtleId} AND tieziTypeId=${tieziTypeId}))
+</insert>
+
+<delete id="deleteTiezi" parameterType="java.lang.Integer">
+    DELETE FROM tiezi_context WHERE id=${_parameter}
+</delete>
+
+<insert id="addReply" parameterType="turtleManager.Domain.Reply">
+    INSERT INTO reply
+    (tieziId,userId<if test="reply_id!=0 and reply_id!=null">,reply_id</if>,context,picList,time )
+    VALUES
+    (${tieziId},${userId}<if test="reply_id!=0 and reply_id!=null">,${reply_id}</if>,#{context},#{picList},#{time})
+</insert>
+
+</mapper>

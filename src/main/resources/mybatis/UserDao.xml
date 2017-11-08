@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="turtleManager.Dao.UserDao">
+    <select id="queryUserByName" parameterType="java.lang.String" resultType="turtleManager.Domain.User">
+        SELECT * FROM user WHERE userName=#{_parameter}
+    </select>
+    <resultMap id="userMap" type="turtleManager.Domain.User">
+        <id column="userId" property="userId" />
+        <result column="userName" property="userName" />
+        <collection property="userInfo" ofType="turtleManager.Domain.UserInfo">
+            <id column="userInfoId" property="userInfoId" />
+            <result column="userPicture" property="userPicture" />
+        </collection>
+    </resultMap>
+    <select id="queryUser" parameterType="java.lang.Integer" resultMap="userMap">
+        select user.userId,user.userName,userinfo.* from user
+        LEFT JOIN userinfo ON user.userInfoId=userinfo.userInfoId
+        WHERE userId=${_parameter};
+    </select>
+</mapper>

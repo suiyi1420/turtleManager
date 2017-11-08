@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="turtleManager.Dao.TurtleDao">
+    <resultMap id="tritleContext" type="turtleManager.Domain.Turtle">
+        <id column="id" property="id" />
+        <result column="context" property="context"/>
+    </resultMap>
+    <select id="getTritleById" resultType="turtleManager.Domain.Turtle" parameterType="java.lang.Integer">
+        SELECT * FROM turtle WHERE turtleId = ${_parameter}
+    </select>
+    <select id="getTurtleByTypeId" resultType="turtleManager.Domain.Turtle" parameterType="java.lang.Integer">
+        SELECT * FROM turtle WHERE typeId = ${_parameter}
+    </select>
+    <select id="getTritleContext" resultMap="tritleContext" parameterType="java.lang.Integer">
+        SELECT id,context FROM turtle WHERE id = ${_parameter}
+    </select>
+    <select id="getTritleNoContext" resultType="turtleManager.Domain.Turtle" parameterType="java.lang.Integer">
+        SELECT id,name,icon FROM turtle WHERE typeId = ${_parameter}
+    </select>
+
+    <resultMap id="turtleType" type="turtleManager.Domain.TurtleType">
+        <id column="turtle_typeId" property="turtle_typeId" />
+        <result column="turtle_typeName" property="turtle_typeName" />
+        <result column="icon" property="icon" />
+        <collection property="turtles" column="turtle_typeId" select="getTurtleByTypeId" />
+    </resultMap>
+    <select id="getTurtleType" resultMap="turtleType" parameterType="java.lang.Integer">
+        SELECT * FROM turtle_type LEFT JOIN turtle ON turtle.typeId=turtle_type.turtle_typeId
+        <where>
+            <choose>
+                <when test="_parameter!=0">
+                    turtle_typeId=${_parameter}
+                </when>
+            </choose>
+        </where>
+    </select>
+    <select id="getAllTurtle" resultType="turtleManager.Domain.Turtle">
+        SELECT id,name,typeId,icon FROM turtle
+    </select>
+
+</mapper>
